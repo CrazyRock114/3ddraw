@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Compass, SunMedium, Eye, BookOpen, Palette, ArrowRight, CheckCircle2, Layers, Sparkles } from 'lucide-react';
+import { Compass, SunMedium, Eye, BookOpen, Palette, ArrowRight, CheckCircle2, Layers, Sparkles, Box } from 'lucide-react';
 import MathFormula from './MathFormula';
 
 export default function HomeView({ setActiveTab }) {

@@ -8,6 +8,49 @@ import StepByStepStudio from './components/StepByStepStudio';
 import CreativeStudio from './components/CreativeStudio';
 import { Box, Heart, BookOpen, Compass, SunMedium, Eye, Palette } from 'lucide-react';
 
+// Error Boundary component to prevent blank screen crashes
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="max-w-xl mx-auto my-20 p-8 rounded-3xl bg-slate-900 border border-red-500/30 text-center space-y-4 shadow-2xl">
+          <div className="w-12 h-12 rounded-2xl bg-red-500/20 text-red-400 mx-auto flex items-center justify-center font-bold text-xl">
+            !
+          </div>
+          <h2 className="text-xl font-bold text-white font-serif">模块渲染出现意外</h2>
+          <p className="text-xs text-slate-400 font-mono">
+            {this.state.error?.message || "未知运行时异常"}
+          </p>
+          <button
+            onClick={() => {
+              this.setState({ hasError: false });
+              window.location.reload();
+            }}
+            className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-bold text-xs shadow hover:bg-amber-400 transition-all"
+          >
+            刷新重试
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
 
@@ -16,14 +59,16 @@ export default function App() {
       {/* Navbar */}
       <Navbar activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      {/* Main Content Area */}
+      {/* Main Content Area with ErrorBoundary */}
       <main className="flex-1 pb-16">
-        {activeTab === 'home' && <HomeView setActiveTab={setActiveTab} />}
-        {activeTab === 'perspective' && <PerspectiveLab />}
-        {activeTab === 'shading' && <ShadingLab />}
-        {activeTab === 'anamorphic' && <AnamorphicLab />}
-        {activeTab === 'tutorials' && <StepByStepStudio />}
-        {activeTab === 'studio' && <CreativeStudio />}
+        <ErrorBoundary>
+          {activeTab === 'home' && <HomeView setActiveTab={setActiveTab} />}
+          {activeTab === 'perspective' && <PerspectiveLab />}
+          {activeTab === 'shading' && <ShadingLab />}
+          {activeTab === 'anamorphic' && <AnamorphicLab />}
+          {activeTab === 'tutorials' && <StepByStepStudio />}
+          {activeTab === 'studio' && <CreativeStudio />}
+        </ErrorBoundary>
       </main>
 
       {/* Footer */}
