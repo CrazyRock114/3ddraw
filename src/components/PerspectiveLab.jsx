@@ -883,7 +883,10 @@ export default function PerspectiveLab() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
               <div className="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-2">
-                <h4 className="text-amber-400 font-bold text-xs">欧氏平面 vs 射影平面 $\mathbb{RP}^2$</h4>
+                <h4 className="text-amber-400 font-bold text-xs flex items-center gap-1">
+                  <span>欧氏平面 vs 射影平面</span>
+                  <MathFormula math="\mathbb{RP}^2" />
+                </h4>
                 <p className="text-xs text-slate-300 leading-relaxed">
                   在射影平面中，二维点 <MathFormula math="(X, Y)" /> 被升维表示为三元组 <MathFormula math="[x, y, w]^T" />，且任意标量倍代表同一个点：
                   <MathFormula math="[x, y, w] \sim [\lambda x, \lambda y, \lambda w]" />。
