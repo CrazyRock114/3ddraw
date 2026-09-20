@@ -245,29 +245,40 @@ export default function StepByStepStudio() {
     clearUserCanvas();
   };
 
+  // Helper to extract normalized canvas coordinates for both mouse and touch
+  const getCoords = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
+    return {
+      x: ((clientX - rect.left) / rect.width) * canvas.width,
+      y: ((clientY - rect.top) / rect.height) * canvas.height,
+    };
+  };
+
   // Drawing logic
   const startDraw = (e) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    if (e.touches && e.touches.length > 1) return;
+    const pos = getCoords(e);
     setIsDrawing(true);
-    setLastPoint({ x, y });
+    setLastPoint(pos);
   };
 
   const draw = (e) => {
     if (!isDrawing || !lastPoint) return;
+    if (e.touches && e.touches.length > 1) return;
+    if (e.cancelable && e.touches) e.preventDefault();
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const pos = getCoords(e);
 
     ctx.beginPath();
     ctx.moveTo(lastPoint.x, lastPoint.y);
-    ctx.lineTo(x, y);
+    ctx.lineTo(pos.x, pos.y);
 
     if (tool === 'eraser') {
       ctx.globalCompositeOperation = 'destination-out';
@@ -292,7 +303,7 @@ export default function StepByStepStudio() {
       ctx.stroke();
     }
 
-    setLastPoint({ x, y });
+    setLastPoint(pos);
   };
 
   const stopDraw = () => {
@@ -629,7 +640,10 @@ export default function StepByStepStudio() {
               onMouseMove={draw}
               onMouseUp={stopDraw}
               onMouseLeave={stopDraw}
-              className="absolute inset-0 w-full h-full cursor-crosshair z-10"
+              onTouchStart={startDraw}
+              onTouchMove={draw}
+              onTouchEnd={stopDraw}
+              className="absolute inset-0 w-full h-full cursor-crosshair z-10 touch-none"
             />
           </div>
 

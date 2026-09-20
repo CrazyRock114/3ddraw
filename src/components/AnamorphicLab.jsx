@@ -11,6 +11,8 @@ export default function AnamorphicLab() {
   const [showRays, setShowRays] = useState(false);
   // Cut paper illusion trick
   const [cutPaperTrick, setCutPaperTrick] = useState(true);
+  // Paper fold angle for ladder preset (90deg L-shape to 180deg flat)
+  const [paperFoldAngle, setPaperFoldAngle] = useState(90);
 
   return (
     <div className="max-w-7xl mx-auto px-4 lg:px-8 py-8 space-y-12">
@@ -144,41 +146,61 @@ export default function AnamorphicLab() {
                     </svg>
                   )}
 
-                  {/* Preset 2: Folded Paper Ladder */}
+                  {/* Preset 2: Folded Paper Ladder (Rendered across 3D crease) */}
                   {selectedPreset === 'ladder' && (
-                    <div className="w-full h-full relative">
-                      {/* Crease line in the middle */}
-                      <div className="absolute top-1/2 left-0 right-0 border-b-2 border-dashed border-red-500/70" />
-                      <span className="absolute top-[48%] right-2 text-[10px] font-mono text-red-600 bg-red-100/90 px-1 rounded">
-                        纸张 90° 折痕线
-                      </span>
+                    <div
+                      className="w-full h-full flex flex-col items-center relative"
+                      style={{ transformStyle: 'preserve-3d' }}
+                    >
+                      {/* Upper Wall Section (Bends back by 180 - foldAngle) */}
+                      <div
+                        className="w-full h-1/2 bg-slate-100 rounded-t-lg relative overflow-hidden border-b border-dashed border-red-500/70"
+                        style={{
+                          transform: `rotateX(-${180 - paperFoldAngle}deg)`,
+                          transformOrigin: 'bottom center',
+                          transition: 'transform 0.2s ease-out',
+                          boxShadow: paperFoldAngle < 150 ? '0 -10px 20px rgba(0,0,0,0.3)' : 'none'
+                        }}
+                      >
+                        <span className="absolute top-2 right-2 text-[9px] font-mono text-slate-500 bg-slate-200/80 px-1 rounded">
+                          竖直纸面 ({180 - paperFoldAngle}°)
+                        </span>
+                        <svg viewBox="0 0 300 150" className="w-full h-full">
+                          {/* Upper rails */}
+                          <line x1="120" y1="20" x2="120" y2="150" stroke="#1e293b" strokeWidth="4" />
+                          <line x1="180" y1="20" x2="180" y2="150" stroke="#1e293b" strokeWidth="4" />
+                          {/* Upper steps */}
+                          {[40, 70, 100, 130].map(y => (
+                            <line key={y} x1="120" y1={y} x2="180" y2={y} stroke="#334155" strokeWidth="3" />
+                          ))}
+                        </svg>
+                      </div>
 
-                      <svg viewBox="0 0 300 300" className="w-full h-full">
-                        {/* Upper Wall section (vertical ladder) */}
-                        <line x1="120" y1="30" x2="120" y2="150" stroke="#1e293b" strokeWidth="4" />
-                        <line x1="180" y1="30" x2="180" y2="150" stroke="#1e293b" strokeWidth="4" />
-                        {/* Upper steps */}
-                        {[50, 75, 100, 125].map(y => (
-                          <line key={y} x1="120" y1={y} x2="180" y2={y} stroke="#334155" strokeWidth="3" />
-                        ))}
+                      {/* Lower Table Section (Lays flat on desk) */}
+                      <div className="w-full h-1/2 bg-slate-100 rounded-b-lg relative overflow-hidden">
+                        <span className="absolute bottom-2 right-2 text-[9px] font-mono text-slate-500 bg-slate-200/80 px-1 rounded">
+                          水平纸面 (桌面)
+                        </span>
+                        <svg viewBox="0 0 300 150" className="w-full h-full">
+                          {/* Lower rails */}
+                          <line x1="120" y1="0" x2="95" y2="135" stroke="#1e293b" strokeWidth="4" />
+                          <line x1="180" y1="0" x2="155" y2="135" stroke="#1e293b" strokeWidth="4" />
+                          {/* Lower steps */}
+                          {[30, 60, 90, 120].map(y => {
+                            const t = y / 135;
+                            const x1 = 120 - 25 * t;
+                            const x2 = 180 - 25 * t;
+                            return <line key={y} x1={x1} y1={y} x2={x2} y2={y} stroke="#334155" strokeWidth="3" />;
+                          })}
 
-                        {/* Lower Table section (leaning ladder) */}
-                        <line x1="120" y1="150" x2="95" y2="270" stroke="#1e293b" strokeWidth="4" />
-                        <line x1="180" y1="150" x2="155" y2="270" stroke="#1e293b" strokeWidth="4" />
-                        {/* Lower steps */}
-                        {[175, 205, 235, 260].map(y => {
-                          const t = (y - 150) / 120;
-                          const x1 = 120 - 25 * t;
-                          const x2 = 180 - 25 * t;
-                          return <line key={y} x1={x1} y1={y} x2={x2} y2={y} stroke="#334155" strokeWidth="3" />;
-                        })}
-
-                        {/* Cast Shadow of the ladder on the lower paper */}
-                        <line x1="120" y1="150" x2="185" y2="245" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" opacity="0.6" />
-                        <line x1="180" y1="150" x2="245" y2="245" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" opacity="0.6" />
-                        <line x1="140" y1="180" x2="200" y2="180" stroke="#94a3b8" strokeWidth="2.5" opacity="0.5" />
-                        <line x1="160" y1="210" x2="220" y2="210" stroke="#94a3b8" strokeWidth="2.5" opacity="0.5" />
-                      </svg>
+                          {/* Cast Shadow of the ladder on the horizontal paper */}
+                          <line x1="120" y1="0" x2="185" y2="120" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" opacity="0.6" />
+                          <line x1="180" y1="0" x2="245" y2="120" stroke="#94a3b8" strokeWidth="4" strokeLinecap="round" opacity="0.6" />
+                          <line x1="135" y1="30" x2="195" y2="30" stroke="#94a3b8" strokeWidth="2.5" opacity="0.5" />
+                          <line x1="150" y1="60" x2="210" y2="60" stroke="#94a3b8" strokeWidth="2.5" opacity="0.5" />
+                          <line x1="165" y1="90" x2="225" y2="90" stroke="#94a3b8" strokeWidth="2.5" opacity="0.5" />
+                        </svg>
+                      </div>
                     </div>
                   )}
 
@@ -265,6 +287,29 @@ export default function AnamorphicLab() {
               onChange={(e) => setViewAngle(Number(e.target.value))}
               className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
             />
+
+            {/* Extra Fold Angle Slider for ladder preset */}
+            {selectedPreset === 'ladder' && (
+              <div className="pt-2 border-t border-slate-800/80 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-300 font-semibold flex items-center gap-1.5">
+                    <Layers className="w-3.5 h-3.5 text-blue-400" />
+                    卡纸对折角度 (Fold Angle)
+                  </span>
+                  <div className="font-mono text-blue-400">
+                    {paperFoldAngle}° {paperFoldAngle === 90 ? '(直角立在桌上)' : paperFoldAngle === 180 ? '(完全平摊)' : ''}
+                  </div>
+                </div>
+                <input
+                  type="range"
+                  min="90"
+                  max="180"
+                  value={paperFoldAngle}
+                  onChange={(e) => setPaperFoldAngle(Number(e.target.value))}
+                  className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                />
+              </div>
+            )}
 
             <div className="flex justify-between text-[11px] text-slate-400 pt-1">
               <button

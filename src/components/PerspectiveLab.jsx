@@ -448,44 +448,56 @@ export default function PerspectiveLab() {
     renderCanvas();
   }, [renderCanvas]);
 
-  // Mouse drag handling on canvas
+  // Coordinate extractor with responsive scaling and touch support
+  const getCanvasCoords = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
+    return {
+      x: ((clientX - rect.left) / rect.width) * canvasSize.width,
+      y: ((clientY - rect.top) / rect.height) * canvasSize.height,
+    };
+  };
+
+  // Mouse & Touch drag handling on canvas
   const handleMouseDown = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
+    if (e.touches && e.touches.length > 1) return;
+    const { x: mouseX, y: mouseY } = getCanvasCoords(e);
 
     // Check hit on handles
     const dist = (x1, y1, x2, y2) => Math.hypot(x1 - x2, y1 - y2);
 
     if (perspectiveMode === 1) {
       const centerVP = { x: (vp1.x + vp2.x) / 2, y: horizonY };
-      if (dist(mouseX, mouseY, centerVP.x, centerVP.y) < 20) {
+      if (dist(mouseX, mouseY, centerVP.x, centerVP.y) < 28) {
         setDraggingTarget('vp1'); // use vp1 to slide
         return;
       }
     } else {
-      if (dist(mouseX, mouseY, vp1.x, vp1.y) < 20) {
+      if (dist(mouseX, mouseY, vp1.x, vp1.y) < 28) {
         setDraggingTarget('vp1');
         return;
       }
-      if (dist(mouseX, mouseY, vp2.x, vp2.y) < 20) {
+      if (dist(mouseX, mouseY, vp2.x, vp2.y) < 28) {
         setDraggingTarget('vp2');
         return;
       }
-      if (perspectiveMode === 3 && dist(mouseX, mouseY, vp3.x, vp3.y) < 20) {
+      if (perspectiveMode === 3 && dist(mouseX, mouseY, vp3.x, vp3.y) < 28) {
         setDraggingTarget('vp3');
         return;
       }
     }
 
     // Check hit on Box handle
-    if (dist(mouseX, mouseY, boxPos.x, boxPos.y) < 30) {
+    if (dist(mouseX, mouseY, boxPos.x, boxPos.y) < 35) {
       setDraggingTarget('box');
       return;
     }
 
     // Check hit near Horizon Line
-    if (Math.abs(mouseY - horizonY) < 15) {
+    if (Math.abs(mouseY - horizonY) < 20) {
       setDraggingTarget('horizon');
       return;
     }
@@ -493,9 +505,10 @@ export default function PerspectiveLab() {
 
   const handleMouseMove = (e) => {
     if (!draggingTarget) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    const mouseX = Math.max(10, Math.min(canvasSize.width - 10, e.clientX - rect.left));
-    const mouseY = Math.max(10, Math.min(canvasSize.height - 10, e.clientY - rect.top));
+    if (e.cancelable && e.touches) e.preventDefault();
+    const { x: rawX, y: rawY } = getCanvasCoords(e);
+    const mouseX = Math.max(10, Math.min(canvasSize.width - 10, rawX));
+    const mouseY = Math.max(10, Math.min(canvasSize.height - 10, rawY));
 
     if (draggingTarget === 'horizon') {
       setHorizonY(mouseY);
@@ -609,7 +622,10 @@ export default function PerspectiveLab() {
               onMouseMove={handleMouseMove}
               onMouseUp={handleMouseUp}
               onMouseLeave={handleMouseUp}
-              className="w-full max-h-[500px] cursor-crosshair rounded-xl border border-slate-800/80 shadow-inner"
+              onTouchStart={handleMouseDown}
+              onTouchMove={handleMouseMove}
+              onTouchEnd={handleMouseUp}
+              className="w-full max-h-[500px] cursor-crosshair rounded-xl border border-slate-800/80 shadow-inner touch-none"
             />
             {/* Interactive floating helper hint */}
             <div className="absolute bottom-4 left-4 pointer-events-none bg-slate-900/85 backdrop-blur border border-slate-700/60 px-3 py-1.5 rounded-lg text-[11px] text-slate-300 flex items-center gap-2">

@@ -118,36 +118,45 @@ export default function CreativeStudio() {
     saveHistory();
   };
 
+  // Helper to extract normalized canvas coordinates for both mouse and touch
+  const getCoords = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
+    return {
+      x: ((clientX - rect.left) / rect.width) * canvas.width,
+      y: ((clientY - rect.top) / rect.height) * canvas.height,
+    };
+  };
+
   // Drawing event handlers
   const startDraw = (e) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * canvas.width;
-    const y = ((e.clientY - rect.top) / rect.height) * canvas.height;
-
+    if (e.touches && e.touches.length > 1) return; // ignore pinch
+    const pos = getCoords(e);
     setIsDrawing(true);
-    setLastPoint({ x, y });
-    setLineStart({ x, y });
+    setLastPoint(pos);
+    setLineStart(pos);
   };
 
   const draw = (e) => {
     if (!isDrawing || !lastPoint) return;
+    if (e.touches && e.touches.length > 1) return;
+    if (e.cancelable && e.touches) e.preventDefault(); // prevent scroll while drawing
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    const rect = canvas.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * canvas.width;
-    const y = ((e.clientY - rect.top) / rect.height) * canvas.height;
+    const pos = getCoords(e);
 
     if (tool === 'line') {
-      // preview line can be drawn in a buffer or direct
       return;
     }
 
     ctx.beginPath();
     ctx.moveTo(lastPoint.x, lastPoint.y);
-    ctx.lineTo(x, y);
+    ctx.lineTo(pos.x, pos.y);
 
     if (tool === 'eraser') {
       ctx.strokeStyle = '#f8fafc';
@@ -170,7 +179,7 @@ export default function CreativeStudio() {
       ctx.stroke();
     }
 
-    setLastPoint({ x, y });
+    setLastPoint(pos);
   };
 
   const stopDraw = (e) => {
@@ -178,16 +187,14 @@ export default function CreativeStudio() {
     if (tool === 'line' && lineStart) {
       const canvas = canvasRef.current;
       const ctx = canvas.getContext('2d');
-      const rect = canvas.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width) * canvas.width;
-      const y = ((e.clientY - rect.top) / rect.height) * canvas.height;
+      const pos = getCoords(e);
 
       const alpha = pencilGrade === '2B' ? 0.4 : pencilGrade === '4B' ? 0.7 : 0.95;
       ctx.strokeStyle = `rgba(15, 23, 42, ${alpha})`;
       ctx.lineWidth = brushSize;
       ctx.beginPath();
       ctx.moveTo(lineStart.x, lineStart.y);
-      ctx.lineTo(x, y);
+      ctx.lineTo(pos.x, pos.y);
       ctx.stroke();
     }
 
@@ -404,7 +411,10 @@ export default function CreativeStudio() {
             onMouseMove={draw}
             onMouseUp={stopDraw}
             onMouseLeave={stopDraw}
-            className="w-full h-full cursor-crosshair"
+            onTouchStart={startDraw}
+            onTouchMove={draw}
+            onTouchEnd={stopDraw}
+            className="w-full h-full cursor-crosshair touch-none"
           />
         </div>
 

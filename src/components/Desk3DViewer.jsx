@@ -127,9 +127,10 @@ export default function Desk3DViewer({ sourceCanvas, onClose }) {
     eraser.castShadow = true;
     scene.add(eraser);
 
-    // 8. Interactive Orbit Controls (Manual dragging)
+    // 8. Interactive Orbit Controls (Manual dragging & Touch support)
     let isDragging = false;
     let prevMouse = { x: 0, y: 0 };
+    let initialPinchDist = null;
     let spherical = { radius: 6.8, theta: Math.PI / 4, phi: 0 }; // spherical coordinates
 
     const updateCamera = () => {
@@ -163,6 +164,46 @@ export default function Desk3DViewer({ sourceCanvas, onClose }) {
       isDragging = false;
     };
 
+    // Touch controls for mobile / tablet
+    const onTouchStart = (e) => {
+      if (e.touches.length === 1) {
+        isDragging = true;
+        prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      } else if (e.touches.length === 2) {
+        isDragging = false;
+        initialPinchDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+      }
+    };
+
+    const onTouchMove = (e) => {
+      if (isDragging && e.touches.length === 1) {
+        const deltaX = e.touches[0].clientX - prevMouse.x;
+        const deltaY = e.touches[0].clientY - prevMouse.y;
+        prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+
+        spherical.phi -= deltaX * 0.008;
+        spherical.theta += deltaY * 0.008;
+        updateCamera();
+      } else if (e.touches.length === 2 && initialPinchDist) {
+        const dist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY
+        );
+        const diff = initialPinchDist - dist;
+        spherical.radius = Math.max(3.5, Math.min(10, spherical.radius + diff * 0.01));
+        initialPinchDist = dist;
+        updateCamera();
+      }
+    };
+
+    const onTouchEnd = () => {
+      isDragging = false;
+      initialPinchDist = null;
+    };
+
     const onWheel = (e) => {
       e.preventDefault();
       spherical.radius = Math.max(3.5, Math.min(10, spherical.radius + e.deltaY * 0.005));
@@ -173,6 +214,9 @@ export default function Desk3DViewer({ sourceCanvas, onClose }) {
     dom.addEventListener('mousedown', onMouseDown);
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
+    dom.addEventListener('touchstart', onTouchStart, { passive: true });
+    window.addEventListener('touchmove', onTouchMove, { passive: true });
+    window.addEventListener('touchend', onTouchEnd, { passive: true });
     dom.addEventListener('wheel', onWheel, { passive: false });
 
     // 9. Animation Loop
@@ -199,6 +243,9 @@ export default function Desk3DViewer({ sourceCanvas, onClose }) {
       dom.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
+      dom.removeEventListener('touchstart', onTouchStart);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onTouchEnd);
       dom.removeEventListener('wheel', onWheel);
       window.removeEventListener('resize', handleResize);
       if (renderer.domElement.parentElement) {

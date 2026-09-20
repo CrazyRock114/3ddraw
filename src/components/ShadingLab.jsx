@@ -231,12 +231,128 @@ export default function ShadingLab() {
           }
         }
       }
-    } else {
-      // Cube faces rendering
-      // Top face, front face, side face
     }
 
     ctx.putImageData(imgData, 0, 0);
+
+    // If Cylinder, draw top elliptical cap
+    if (objectType === 'cylinder') {
+      const cylW = radius * 1.5;
+      const cylH = radius * 1.8;
+      const topY = cy - cylH / 2;
+      const capNorm = normalize3(vec3(0, -0.6, 0.8));
+      const capDot = Math.max(0, dot3(capNorm, lightDir));
+      const capInt = Math.min(1, Math.max(0, capDot * 0.85 * lightIntensity + 0.15));
+      const capColor = Math.round(capInt * 255);
+
+      ctx.save();
+      ctx.fillStyle = `rgb(${capColor},${capColor},${capColor})`;
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(cx, topY, cylW / 2, 22, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Check hover on cylinder cap
+      const hx = hoverCoord.x - cx;
+      const hy = hoverCoord.y - topY;
+      if ((hx * hx) / ((cylW / 2) * (cylW / 2)) + (hy * hy) / (22 * 22) <= 1) {
+        const angle = Math.round((Math.acos(Math.min(1, Math.max(-1, dot3(capNorm, lightDir)))) * 180) / Math.PI);
+        probeResult = {
+          nx: Number(capNorm.x.toFixed(2)), ny: Number(capNorm.y.toFixed(2)), nz: Number(capNorm.z.toFixed(2)),
+          lx: Number(lightDir.x.toFixed(2)), ly: Number(lightDir.y.toFixed(2)), lz: Number(lightDir.z.toFixed(2)),
+          dot: Number(capDot.toFixed(2)), angleDeg: angle, brightness: Number(capInt.toFixed(2))
+        };
+      }
+      ctx.restore();
+    }
+
+    // If Cube, draw 3 Isometric Faces with Lambert Shading
+    if (objectType === 'cube') {
+      const size = 85;
+      const nTop = normalize3(vec3(0, -0.7, 0.7));
+      const nLeft = normalize3(vec3(-0.8, 0.2, 0.55));
+      const nRight = normalize3(vec3(0.8, 0.2, 0.55));
+
+      const dotTop = dot3(nTop, lightDir);
+      const dotLeft = dot3(nLeft, lightDir);
+      const dotRight = dot3(nRight, lightDir);
+
+      const intTop = Math.min(1, Math.max(0.08, Math.max(0, dotTop) * 0.85 * lightIntensity + 0.12));
+      const intLeft = Math.min(1, Math.max(0.08, Math.max(0, dotLeft) * 0.85 * lightIntensity + bounceIntensity * 0.3 + 0.08));
+      const intRight = Math.min(1, Math.max(0.08, Math.max(0, dotRight) * 0.85 * lightIntensity + bounceIntensity * 0.3 + 0.08));
+
+      const cTop = Math.round(intTop * 255);
+      const cLeft = Math.round(intLeft * 255);
+      const cRight = Math.round(intRight * 255);
+
+      ctx.save();
+      // 1. Top Face
+      ctx.fillStyle = `rgb(${cTop},${cTop},${cTop})`;
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - size);
+      ctx.lineTo(cx + size, cy - size * 0.45);
+      ctx.lineTo(cx, cy + size * 0.1);
+      ctx.lineTo(cx - size, cy - size * 0.45);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 2. Left Face
+      ctx.fillStyle = `rgb(${cLeft},${cLeft},${cLeft})`;
+      ctx.beginPath();
+      ctx.moveTo(cx - size, cy - size * 0.45);
+      ctx.lineTo(cx, cy + size * 0.1);
+      ctx.lineTo(cx, cy + size * 1.1);
+      ctx.lineTo(cx - size, cy + size * 0.55);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 3. Right Face
+      ctx.fillStyle = `rgb(${cRight},${cRight},${cRight})`;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy + size * 0.1);
+      ctx.lineTo(cx + size, cy - size * 0.45);
+      ctx.lineTo(cx + size, cy + size * 0.55);
+      ctx.lineTo(cx, cy + size * 1.1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Check hover probe on cube faces
+      const hx = hoverCoord.x;
+      const hy = hoverCoord.y;
+      if (hy < cy + size * 0.1 && hy > cy - size) {
+        // top zone
+        const angle = Math.round((Math.acos(Math.min(1, Math.max(-1, dotTop))) * 180) / Math.PI);
+        probeResult = {
+          nx: Number(nTop.x.toFixed(2)), ny: Number(nTop.y.toFixed(2)), nz: Number(nTop.z.toFixed(2)),
+          lx: Number(lightDir.x.toFixed(2)), ly: Number(lightDir.y.toFixed(2)), lz: Number(lightDir.z.toFixed(2)),
+          dot: Number(dotTop.toFixed(2)), angleDeg: angle, brightness: Number(intTop.toFixed(2))
+        };
+      } else if (hx < cx && hy >= cy + size * 0.1 && hy <= cy + size * 1.1) {
+        // left face
+        const angle = Math.round((Math.acos(Math.min(1, Math.max(-1, dotLeft))) * 180) / Math.PI);
+        probeResult = {
+          nx: Number(nLeft.x.toFixed(2)), ny: Number(nLeft.y.toFixed(2)), nz: Number(nLeft.z.toFixed(2)),
+          lx: Number(lightDir.x.toFixed(2)), ly: Number(lightDir.y.toFixed(2)), lz: Number(lightDir.z.toFixed(2)),
+          dot: Number(dotLeft.toFixed(2)), angleDeg: angle, brightness: Number(intLeft.toFixed(2))
+        };
+      } else if (hx >= cx && hy >= cy + size * 0.1 && hy <= cy + size * 1.1) {
+        // right face
+        const angle = Math.round((Math.acos(Math.min(1, Math.max(-1, dotRight))) * 180) / Math.PI);
+        probeResult = {
+          nx: Number(nRight.x.toFixed(2)), ny: Number(nRight.y.toFixed(2)), nz: Number(nRight.z.toFixed(2)),
+          lx: Number(lightDir.x.toFixed(2)), ly: Number(lightDir.y.toFixed(2)), lz: Number(lightDir.z.toFixed(2)),
+          dot: Number(dotRight.toFixed(2)), angleDeg: angle, brightness: Number(intRight.toFixed(2))
+        };
+      }
+      ctx.restore();
+    }
 
     // 3. Draw Light Source Position Icon
     const lightDist = 180;
@@ -312,10 +428,14 @@ export default function ShadingLab() {
     renderCanvas();
   }, [renderCanvas]);
 
-  const handleMouseMove = (e) => {
-    const rect = canvasRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+  const handleProbeMove = (e) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
+    const x = ((clientX - rect.left) / rect.width) * canvasWidth;
+    const y = ((clientY - rect.top) / rect.height) * canvasHeight;
     setHoverCoord({ x, y });
     setIsHovering(true);
   };
@@ -349,6 +469,7 @@ export default function ShadingLab() {
               {[
                 { id: 'sphere', label: '石膏球体 (Sphere)' },
                 { id: 'cylinder', label: '圆柱体 (Cylinder)' },
+                { id: 'cube', label: '正方体 (Cube)' },
               ].map(shape => (
                 <button
                   key={shape.id}
@@ -395,14 +516,17 @@ export default function ShadingLab() {
               ref={canvasRef}
               width={canvasWidth}
               height={canvasHeight}
-              onMouseMove={handleMouseMove}
+              onMouseMove={handleProbeMove}
               onMouseLeave={() => setIsHovering(false)}
-              className="w-full max-h-[440px] cursor-crosshair rounded-xl border border-slate-800/80 shadow-inner"
+              onTouchStart={handleProbeMove}
+              onTouchMove={handleProbeMove}
+              onTouchEnd={() => setIsHovering(false)}
+              className="w-full max-h-[440px] cursor-crosshair rounded-xl border border-slate-800/80 shadow-inner touch-none"
             />
             {/* Hover instruction */}
             <div className="absolute bottom-4 left-4 pointer-events-none bg-slate-900/85 backdrop-blur border border-slate-700/60 px-3 py-1.5 rounded-lg text-[11px] text-slate-300 flex items-center gap-2">
               <Crosshair className="w-3.5 h-3.5 text-amber-400" />
-              <span>鼠标在球体上移动，实时探查该点表面法向量 N 与光向量 L 的数学点积</span>
+              <span>移动鼠标或触屏轻触，实时探查该点表面法向量 N 与光向量 L 的数学点积</span>
             </div>
           </div>
 
